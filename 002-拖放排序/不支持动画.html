@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>002-拖放排序</title>
+    <style>
+        .continer {
+            border: solid 1px #999;
+            width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+            box-sizing: border-box;
+            margin-top: 20px;
+            border-radius: 2px;
+            position: relative;
+        }
+
+        .target {
+            height: 50px;
+            width: 100%;
+            background-color: blueviolet;
+            border-radius: 2px;
+            box-shadow: 0 0 5px #ccc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 20px;
+            font-weight: 600;
+            cursor: grab;
+            transition: transform 300ms;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="continer">
+        <div class="target" draggable="true">11111111</div>
+        <div class="target" draggable="true">22222222</div>
+        <div class="target" draggable="true">33333333</div>
+        <div class="target" draggable="true">44444444</div>
+        <div class="target" draggable="true">55555555</div>
+        <div class="target" draggable="true">66666666</div>
+        <div class="target" draggable="true">77777777</div>
+    </div>
+</body>
+<script>
+
+    const con = document.querySelector('.continer')
+
+    const items = Array.from(con.querySelectorAll('.target'));
+    let dragItem = null;
+    con.ondragstart = e => {
+        dragItem = e.target
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    con.ondragover = e => {
+        e.preventDefault()
+        let { target } = e;
+        if (target.className === 'target' && target !== dragItem) {
+            const rect = target.getBoundingClientRect()
+            // 目标的中间再屏幕中的坐标
+            let rectHalfPosition = rect.y + rect.height / 2;
+            // 移动的位置在目标一半的坐标下面？插入到目标后面，否则 前面
+            const p = e.clientY > rectHalfPosition ? 'after' : 'before'
+            if (p === 'before') {
+                // 在目标元素前面插入
+                con.insertBefore(dragItem, target)
+            } else {
+                // 在目标元素后面插入
+                con.insertBefore(target, dragItem)
+            }
+
+        }
+    }
+    con.ondragend = () => {
+        dragItem = null;
+    };
+</script>
+
+</html>
