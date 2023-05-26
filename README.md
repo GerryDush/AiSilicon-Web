@@ -66,7 +66,7 @@
 
 ## 许可证
 
-本项目采用 Unlicense 许可证，详细信息请参阅 [LICENSE](https://chat.openai.com/c/LICENSE) 文件。
+本项目采用 Unlicense 许可证，详细信息请参阅 [LICENSE](./LICENSE) 文件。
 
 希望你在探索这些有趣的 Web 小例程时玩得开心！如果有任何问题或建议，请随时提出。
 
