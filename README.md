@@ -56,7 +56,6 @@
 5.  推送到你的 Fork 仓库：
 
     ```
-    shellCopy code
     git push origin feature/your-feature
     ```
 
