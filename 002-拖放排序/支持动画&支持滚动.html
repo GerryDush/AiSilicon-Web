@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>002-拖放排序</title>
+    <style>
+        .continer {
+            border: solid 1px #999;
+            width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+            box-sizing: border-box;
+            border-radius: 2px;
+            height: 600px;
+            overflow: auto;
+        }
+
+        .target {
+            width: 100%;
+            background-color: blueviolet;
+            border-radius: 2px;
+            box-shadow: 0 0 5px #ccc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 20px;
+            font-weight: 600;
+            cursor: grab;
+            transition: transform 500ms;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+        }
+
+        .top {
+            width: 400px;
+            height: 30px;
+            /* background-color: red; */
+            margin-bottom: -30px;
+            z-index: 99;
+        }
+
+        .bottom {
+            width: 400px;
+            height: 30px;
+            /* background-color: red; */
+            margin-top: -30px;
+            z-index: 99;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="top"></div>
+    <div class="continer"></div>
+    <div class="bottom"></div>
+</body>
+<script>
+
+    /**
+     * 支持动画的拖放排序
+     * 
+     * 不支持动画版本的拖放排序是通过删除元素和插入元素来实现的，无法实现动画
+     * 
+     * 因此需要采用使用绝对定位 + 控制元素的transform（比控制position 的 left、top 流畅）坐标来实现动画
+     * 
+     * 通过交换被拖放元素和目标元素的transform实现动画。( .target{transition: transform 300ms;})
+     * 
+     */
+
+    // 根据元素的高度和间距计算元素位置
+
+    const continer = document.querySelector('.continer')
+
+    const con = document.createElement('div')
+
+    let offset = 0; // 上边距
+    for (let i = 0; i < 100; i++) {
+        const div = document.createElement('div');
+        div.classList.add('target');
+        div.draggable = true; // 允许拖放
+        div.innerText = `${i}${i}${i}${i}${i}${i}${i}${i}`
+        div.style.position = 'absolute'
+        div.style.height = `${50}px` // 元素的高度
+        div.style.top = 0
+        div.style.left = 0
+        div.style.transform = `translateY(${offset}px)`
+        div.style.width = `${400 - 40}px`
+        div.setAttribute('sort', i) // 记住元素的顺序，在排序是决定在哪个位置插入
+        offset += 70; // 偏移 元素高度+下边距
+        con.appendChild(div)
+    }
+    // 元素 + 边距的总高度
+    con.style.minHeight = `${offset - 20}px`
+    con.style.position = 'relative'
+
+    continer.appendChild(con)
+
+    const items = Array.from(con.querySelectorAll('.target'));
+
+    // 记住当前拖动的元素
+    let dragItem = null;
+    // 开始拖动时触发一次
+    con.ondragstart = e => {
+        dragItem = e.target
+        // 设置拖动时图标
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.dropEffect = 'move';
+    }
+
+    // 用于防抖，由于判断元素是在前面插入还是在后面插入，是通过当前拖放元素处于目标元素的上半部分还是下半部分实现的
+    // 在动画执行移动的过程中，同时ondragover事件也在不断的触发，会导致频繁的判断拖放元素处于目标元素的位置，从而导致抖动
+    let moving = [];
+    con.ondragover = e => {
+        e.preventDefault()
+        let { target } = e;
+
+        // 防止因动画导致 同一个被拖放元素和目标元素之间触发
+        if ((moving[0] === target.getAttribute('sort') && moving[1] === dragItem.getAttribute('sort'))) {
+            return;
+        }
+        // 当被拖放元素在其他元素之上时才处理，并且不是被拖放元素时
+        if (target.className === 'target' && target !== dragItem) {
+            const rect = target.getBoundingClientRect()
+            // 计算目标的中间在屏幕中的坐标
+            let rectHalfPosition = rect.y + rect.height / 2;
+            // 移动的位置在目标一半的坐标下面？插入到目标后面，否则 前面
+            const p = e.clientY > rectHalfPosition ? 'after' : 'before'
+
+            if (p === 'before') {
+                // 在目标元素上方插入
+
+                // 交换被拖放元素与目标元素的坐标信息
+                // [target.style.transform, dragItem.style.transform] = [dragItem.style.transform, target.style.transform];
+
+                // // 交换它们的顺序
+                // let tmp = target.getAttribute('sort');
+                // target.setAttribute('sort', dragItem.getAttribute('sort'))
+                // dragItem.setAttribute('sort', tmp)
+
+
+                const sort1 = parseInt(dragItem.getAttribute('sort'));
+                const sort2 = parseInt(target.getAttribute('sort'));
+
+                let pre;
+                let preSort;
+                let now;
+                let tmp;
+                if (sort2 > sort1) {
+                    // up，元素上移位
+
+                    let selector = [];
+                    for (let i = sort1; i < sort2; i++) {
+                        selector.push(`[sort='${i}']`)
+                    }
+                    selector = Array.from(document.querySelectorAll(selector.join(',')));
+
+                    for (let i = selector.length-1; i > 0; i++) {
+                        selector[i].style.transform=selector[i-1].style.transform;
+                        selector[i].setAttribute('sort',selector[i-1].getAttribute('sort'));
+                    }
+
+                } else {
+                    // down
+
+                }
+
+
+            } else {
+                // 在目标元素下方插入
+
+                // 获取目标元素下方元素，在它的下方插入
+                target = document.querySelector(`[sort='${parseInt(target.getAttribute('sort')) + 1}']`)
+                // 如果目标元素下方没有元素，获取最后一个元素在它的下方插入
+                if (!target) target = document.querySelector(`[sort='${items.length - 1}']`)
+                if (!target.style) {
+                    console.log(target)
+                }
+
+                // 交换被拖放元素与目标元素的坐标信息
+                [target.style.transform, dragItem.style.transform] = [dragItem.style.transform, target.style.transform];
+                // 交换它们的顺序
+                let tmp = target.getAttribute('sort');
+                target.setAttribute('sort', dragItem.getAttribute('sort'))
+                dragItem.setAttribute('sort', tmp);
+            }
+
+            // 动画结束，允许再次同一个被拖放元素和目标元素
+            target.ontransitionend = () => moving = [];
+
+            // 防止因动画导致 同一个被拖放元素和目标元素之间触发，这里记住它
+            moving = [target.getAttribute('sort'), dragItem.getAttribute('sort')];
+        }
+    }
+    // 拖放结束时
+    con.ondragend = () => {
+        dragItem = null;
+    };
+
+    let scrollTimer = null;
+    document.querySelector('.top').ondragenter = (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        scrollTimer = setInterval(() => {
+            continer.scrollTop -= 2;
+        }, 0)
+    }
+
+
+    document.querySelector('.bottom').ondragenter = (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        scrollTimer = setInterval(() => {
+            continer.scrollTop += 2;
+        }, 0)
+
+    }
+    document.querySelector('.top').ondragleave = document.querySelector('.bottom').ondragleave = (e) => {
+        e.preventDefault()
+        clearInterval(scrollTimer)
+    }
+</script>
+
+</html>
