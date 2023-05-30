@@ -86,7 +86,7 @@
     const con = document.createElement('div')
 
     let offset = 0; // 上边距
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 200; i++) {
         const div = document.createElement('div');
         div.classList.add('target');
         div.draggable = true; // 允许拖放
@@ -119,89 +119,91 @@
         e.dataTransfer.dropEffect = 'move';
     }
 
-    // 用于防抖，由于判断元素是在前面插入还是在后面插入，是通过当前拖放元素处于目标元素的上半部分还是下半部分实现的
-    // 在动画执行移动的过程中，同时ondragover事件也在不断的触发，会导致频繁的判断拖放元素处于目标元素的位置，从而导致抖动
+
+
     let moving = [];
     con.ondragover = e => {
         e.preventDefault()
         let { target } = e;
-
-        // 防止因动画导致 同一个被拖放元素和目标元素之间触发
+        if (target.className !== 'target' || target === dragItem) {
+            return;
+        }
         if ((moving[0] === target.getAttribute('sort') && moving[1] === dragItem.getAttribute('sort'))) {
             return;
         }
-        // 当被拖放元素在其他元素之上时才处理，并且不是被拖放元素时
-        if (target.className === 'target' && target !== dragItem) {
-            const rect = target.getBoundingClientRect()
-            // 计算目标的中间在屏幕中的坐标
-            let rectHalfPosition = rect.y + rect.height / 2;
-            // 移动的位置在目标一半的坐标下面？插入到目标后面，否则 前面
-            const p = e.clientY > rectHalfPosition ? 'after' : 'before'
+        const rect = target.getBoundingClientRect()
+        // 计算目标的中间在屏幕中的坐标
+        let rectHalfPosition = rect.y + rect.height / 2;
+        // 移动的位置在目标一半的坐标下面？插入到目标后面，否则 前面
+        const p = e.clientY > rectHalfPosition ? 'after' : 'before'
+
+
+        let tmp;
+        let selector = [];
+        const sort1 = parseInt(dragItem.getAttribute('sort'));
+        const sort2 = parseInt(target.getAttribute('sort'));
+        if (sort2 > sort1) {
+            // 目标元素在拖移元素后面，source和target交换位置，source与target之间的元素整体上移
 
             if (p === 'before') {
-                // 在目标元素上方插入
-
-                // 交换被拖放元素与目标元素的坐标信息
-                // [target.style.transform, dragItem.style.transform] = [dragItem.style.transform, target.style.transform];
-
-                // // 交换它们的顺序
-                // let tmp = target.getAttribute('sort');
-                // target.setAttribute('sort', dragItem.getAttribute('sort'))
-                // dragItem.setAttribute('sort', tmp)
-
-
-                const sort1 = parseInt(dragItem.getAttribute('sort'));
-                const sort2 = parseInt(target.getAttribute('sort'));
-
-                let pre;
-                let preSort;
-                let now;
-                let tmp;
-                if (sort2 > sort1) {
-                    // up，元素上移位
-
-                    let selector = [];
-                    for (let i = sort1; i < sort2; i++) {
-                        selector.push(`[sort='${i}']`)
-                    }
-                    selector = Array.from(document.querySelectorAll(selector.join(',')));
-
-                    for (let i = selector.length-1; i > 0; i++) {
-                        selector[i].style.transform=selector[i-1].style.transform;
-                        selector[i].setAttribute('sort',selector[i-1].getAttribute('sort'));
-                    }
-
-                } else {
-                    // down
-
+                for (let i = sort1; i < sort2; i++) {
+                    selector.push(`[sort='${i}']`)
                 }
-
-
             } else {
-                // 在目标元素下方插入
-
-                // 获取目标元素下方元素，在它的下方插入
-                target = document.querySelector(`[sort='${parseInt(target.getAttribute('sort')) + 1}']`)
-                // 如果目标元素下方没有元素，获取最后一个元素在它的下方插入
-                if (!target) target = document.querySelector(`[sort='${items.length - 1}']`)
-                if (!target.style) {
-                    console.log(target)
+                for (let i = sort1; i <= sort2; i++) {
+                    selector.push(`[sort='${i}']`)
                 }
+            }
+            if (!selector.length) {
+                return;
+            }
+            selector = Array.from(document.querySelectorAll(selector.join(',')));
+            selector = selector.sort((a, b) => (parseInt(a.getAttribute('sort')) - parseInt(b.getAttribute('sort'))))
 
-                // 交换被拖放元素与目标元素的坐标信息
-                [target.style.transform, dragItem.style.transform] = [dragItem.style.transform, target.style.transform];
-                // 交换它们的顺序
-                let tmp = target.getAttribute('sort');
-                target.setAttribute('sort', dragItem.getAttribute('sort'))
-                dragItem.setAttribute('sort', tmp);
+            tmp = {
+                transform: selector[selector.length - 1].style.transform,
+                sort: selector[selector.length - 1].getAttribute('sort')
+            }
+            for (let i = selector.length - 1; i > 0; i--) {
+                selector[i].style.transform = selector[i - 1].style.transform;
+                selector[i].setAttribute('sort', selector[i - 1].getAttribute('sort'))
+            }
+            selector[0].style.transform = tmp.transform;
+            selector[0].setAttribute('sort', tmp.sort);
+        } else {
+            // 目标元素在拖移元素前面，source和target交换位置，source与target之间的元素整体下移
+
+            if (p === 'before') {
+                for (let i = sort2; i <= sort1; i++) {
+                    selector.push(`[sort='${i}']`)
+                }
+            } else {
+                for (let i = sort2 + 1; i <= sort1; i++) {
+                    selector.push(`[sort='${i}']`)
+                }
+            }
+            if (!selector.length) {
+                return;
             }
 
-            // 动画结束，允许再次同一个被拖放元素和目标元素
-            target.ontransitionend = () => moving = [];
+            selector = Array.from(document.querySelectorAll(selector.join(',')));
+            selector = selector.sort((a, b) => (parseInt(a.getAttribute('sort')) - parseInt(b.getAttribute('sort'))))
 
-            // 防止因动画导致 同一个被拖放元素和目标元素之间触发，这里记住它
-            moving = [target.getAttribute('sort'), dragItem.getAttribute('sort')];
+            tmp = {
+                transform: selector[0].style.transform,
+                sort: selector[0].getAttribute('sort')
+            }
+            for (let i = 0; i < selector.length - 1; i++) {
+                selector[i].style.transform = selector[i + 1].style.transform;
+                selector[i].setAttribute('sort', selector[i + 1].getAttribute('sort'))
+            }
+            selector[selector.length - 1].style.transform = tmp.transform;
+            selector[selector.length - 1].setAttribute('sort', tmp.sort);
         }
+        // 动画结束，允许再次同一个被拖放元素和目标元素
+        target.ontransitionend = () => moving = [];
+        // 防止因动画导致 同一个被拖放元素和目标元素之间触发，这里记住它
+        moving = [target.getAttribute('sort'), dragItem.getAttribute('sort')];
     }
     // 拖放结束时
     con.ondragend = () => {

@@ -146,7 +146,6 @@
             
             // 动画结束，允许再次同一个被拖放元素和目标元素
             target.ontransitionend = () => moving = [];
-
             // 防止因动画导致 同一个被拖放元素和目标元素之间触发，这里记住它
             moving = [target.getAttribute('sort'), dragItem.getAttribute('sort')];
         }
