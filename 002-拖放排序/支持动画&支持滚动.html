@@ -114,6 +114,8 @@
     // 开始拖动时触发一次
     con.ondragstart = e => {
         dragItem = e.target
+        dragItem.style.boxShadow='0 0 20px red'
+        dragItem.style.zIndex=99;
         // 设置拖动时图标
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.dropEffect = 'move';
@@ -207,6 +209,8 @@
     }
     // 拖放结束时
     con.ondragend = () => {
+        dragItem.style.boxShadow=''
+        dragItem.style.zIndex=0;
         dragItem = null;
     };
 
